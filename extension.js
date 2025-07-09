@@ -17,20 +17,38 @@ function activate(context) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with  registerCommand
 	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('markdown-quiz-editor.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+	const disposable = vscode.commands.registerCommand
+	(
+		'markdown-quiz-editor.helloWorld', 
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Markdown Quiz Editor!');
-		testFunction();
+		function () {
+			vscode.window.showInformationMessage('Hello World from Markdown Quiz Editor!');
+			testFunction();
 
+			const editor = vscode.window.activeTextEditor;
 
+			if(!editor) {
+				vscode.window.showErrorMessage('No active text editor found.');
+				return;
+			}
 
-	});
+			const text = editor.document.getText();
+			const jsonResult = markdown_to_JSON_translator(text);
+
+			vscode.workspace.openTextDocument
+			(
+				{ 
+					content: JSON.stringify(jsonResult, null, 2), 
+					language: 'json' 
+				}
+			)
+			.then( doc => vscode.window.showTextDocument(doc) )
+
+		}
+	);
 
 	context.subscriptions.push(disposable);
 }
-
 
 /**
  * Translates a markdown-formatted quiz into a structured JSON object.
@@ -55,6 +73,10 @@ function activate(context) {
  * // ]
  */
 function markdown_to_JSON_translator(markdownContent) {
+	return markdown_to_JSON_translatorV1(markdownContent);
+}
+
+function markdown_to_JSON_translatorV1(markdownContent) {
 	
 	// Split the markdown content into lines for processing
 	// Returns each line as an element in an array
@@ -68,8 +90,8 @@ function markdown_to_JSON_translator(markdownContent) {
 
 		// '#' is interpreted as the question text.
 		if( ln.startsWith('# ') ) {
-			const question = ln.slice(2).trim()
-			result.push( { question });
+			const questionText = ln.slice(2).trim()
+			result.push( { question: questionText } );
 		}
 	
 		// '##' is interpreted as the quiz comment (optional).
@@ -79,33 +101,69 @@ function markdown_to_JSON_translator(markdownContent) {
 		}
 
 		// '###' is interpreted as the quiz option.
-		// TODO: Check how to handle option texts with whitespaces inbetween
 		else if ( ln.startsWith('### ') ) {
+			result.push( handleMarkdownQuizOptions(ln) );
+		} // end of if-else
 
-			// Array of substring tokens, split at whitespaces
-			const tokenize = ln.slice(4).trim().split(/\s+/);
-			let isCorrect = false;
+	} // end of for
 
-			if (tokenize[0] === '[x]') {
-				// If the last token is '[x]', it indicates a correct answer
-				isCorrect = true;
+	return {content: result};
+} // end of function `markdown_to_JSON_translator`
 
 
-				const option = {
-					optionText: tokenize[0], // get option text
-					correct: isCorrect // default to false
-				}	
-			}
+/**
+ * Parses a markdown quiz option line and extracts the option text and correctness.
+ *
+ * This auxiliary function is intended for use with `markdown_to_JSON_translator`.
+ * It processes a single line representing a quiz option, which should start with
+ * either '[x]' (for correct answers) or '[ ]' (for incorrect answers), and returns
+ * an object containing the cleaned option text and a boolean indicating correctness.
+ *
+ * @param {string} ln - The line of markdown text representing a quiz option, expected to start with '### [x] ' or '### [ ] '.
+ * @returns {{ optionText: string, correct: boolean }} An object with the extracted option text and a flag indicating if it is the correct answer.
+ */
+function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_JSON_translator` to handle quiz options
 
-			else {
+	// Gets the option text by removing the '### ' prefix
+	let optionTxt = ln.slice(4).trim();
 
-			}
+	// Array of substring tokens, split at whitespaces, e.g. '[x] Option   1' -> ['[x]', 'Option', '1']
+	// This variable is relevant for checking if the option is correct ('[x]') or not.
+	const tokenize = optionTxt.split(/\s+/);
 
-			
+	// Assume that the option is incorrect by default until proven otherwise (i.e., if it starts with '[x]')
+	let isCorrect = false;
+
+	// Checks if the first token is '[x]'.
+	// Assume there are no other patterns like '[x]' in the option text.
+	if (tokenize[0] === '[x]') {
+
+		// If the first token is '[x]', it indicates a correct answer
+		isCorrect = true;
+		optionTxt = optionTxt.split('[x]')[1]; // Remove '[x] ' prefix
+		optionTxt = optionTxt.trim(); // Trim any leading/trailing whitespace
+
+	} 
+	
+	// Assume there are no other patterns like '[ ]' in the option text.
+	else {
+
+		const splitOption = optionTxt.split('[ ]');
+		
+		// Ensure that the option starts with '[ ]' if it is not correct
+		// Otherwise, it is a regular option, so calling at index 1 leads to an out-of-bounds error
+		if( splitOption.length > 1 ) {
+			optionTxt = optionTxt.split('[ ]')[1]; // Remove '[ ] ' prefix
 		}
 
 	}
-}
+
+	return {
+		optionText: optionTxt, // get option text
+		correct: isCorrect // default to false
+	}	
+
+} // end of function `handleMarkdownQuizOptions`
 
 
 
