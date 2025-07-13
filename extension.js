@@ -299,13 +299,10 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	const result = {};
 
 	// Checks if there are options in the markdown content (indicated by '###').
-	let hasOptions = false;
+	let hasOptions = false
 
 	// Flag to track if we are currently processing a question when parsing the line with '# '
-	let isQuestion = true;
-
-	// Get the quiz options from the markdown content and store them in a JSON object
-	const quizOptionsJSON_obj = getQuizOptionsFromMarkdown(lines);
+	let isQuestion = true
 
 	// Iterate through each line to parse the markdown content
 	for(let ln of lines) {
@@ -320,7 +317,7 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 			if(isQuestion) {
 
 				// Reset the flag for the next question
-				isQuestion = false; 
+				isQuestion = false
 
 				// adds the question text to the result object
 				result[`question`] = "<div>\n      " /* 6 spaces */ + parsedContent + "\n    </div>" /* 4 spaces */; 
@@ -341,7 +338,9 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 
 	} // end of for
 
-	result[`options`] = quizOptionsJSON_obj // get the quiz options from the markdown content
+	// Get the quiz options from the markdown content and store them in a JSON object.
+	result[`options`] = getQuizOptionsFromMarkdown(lines);
+
 	result[`quizSet`] = 'GENERIC'
 	result[`inputFilter`] = { }
 	
