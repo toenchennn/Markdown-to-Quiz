@@ -85,6 +85,57 @@ function markdown_to_JSON_translatorV2(markdownContent) {
 	// Split the markdown content into lines for processing
 	const splitLines = markdownContent.split('\n');
 
+	markdownTokenProcessor(splitLines);
+
+}
+
+
+function markdownTokenProcessor(splitLines) {
+
+	// Initialize an array to hold the parsed expressions
+	const result = [];
+
+	// Flag to track if we are currently processing a question when parsing the line with '# '
+	// Otherwise, it is interpreted as the question type.
+	let isQuestion = true; 
+
+	// Iterate through each line to parse the markdown content
+	for(let ln of lines) {
+
+		// '#' is interpreted as the question text in the first parsing.
+		// In the second parsing, it is interpreted as the question type.
+		if( ln.startsWith('# ') ) {
+
+				const getLineContent = ln.slice(2).trim();
+
+			if(isQuestion) {
+
+				// Reset the flag for the next question
+				isQuestion = false; 
+				result.push( { question: getLineContent } );
+
+			} else {
+				
+				
+
+			} // end of if-else
+
+		}
+	
+		// '##' is interpreted as the quiz comment (optional).
+		else if( ln.startsWith('## ') ) {
+			 const comment = ln.slice(3).trim()
+			 result.push( { comment } );
+		}
+
+		// '###' is interpreted as the quiz option.
+		else if ( ln.startsWith('### ') ) {
+			
+			result.push( handleMarkdownQuizOptions(ln) );
+		} // end of if-else
+
+	} // end of for
+
 }
 
 
@@ -99,6 +150,18 @@ function handleInconsistentQuizType(quizType, arrayOfQuizOptions) {
 
 }
 
+/**
+ * Determines the quiz type based on a given mnemonic string.
+ *
+ * Accepts various case-insensitive mnemonics or abbreviations and returns the corresponding quiz type:
+ * - "MULTIPLE" or "MC" for multiple choice
+ * - "SINGLE" or "SC" for single choice
+ * - "NUMERIC" for numeric input
+ * - "FREE_TEXT" or "FREETEXT" for free text input
+ *
+ * @param {string} mnemonic - The mnemonic or abbreviation representing the quiz type.
+ * @returns {('MULTIPLE'|'SINGLE'|'NUMERIC'|'FREE_TEXT'|null)} The quiz type string, or null if no match is found.
+ */
 function getQuizTypeFromMnemonic(mnemonic) {
 
 	// Convert the mnemonic to uppercase for case-insensitive comparison
@@ -125,28 +188,44 @@ function getQuizTypeFromMnemonic(mnemonic) {
 
 }
 
-function isSingleChoiceQuiz(listOfOptions) {
+/**
+ * Determines if the provided list of options represents a single-choice quiz.
+ *
+ * A single-choice quiz is defined as having exactly one correct answer among the options.
+ * Each option is expected to be a JSON object with a boolean `correct` property.
+ *
+ * @param {Array<Object>} listOfOptions - Array of option objects, each containing a `correct` boolean property.
+ * @returns {boolean} Returns `true` if there is exactly one correct answer, otherwise `false`.
+ */
+function isSingleChoiceQuiz(listOfOptions/* List of JSON Objects */) {
 
 	// Check if the list of options contains only one correct answer
-	let correctCount = 0;
+	let correctCount = false;
 
 	for(let option of listOfOptions) {
 		if(option.correct) {
-			correctCount++;
+			correctCount = true;
+			break; // prevents iterating 
 		}
 	}
 
-	if(correctCount === 0) {
+	if(!correctCount) {
 		// If there are no correct answers, it is not a single-choice quiz
 		
 		return false;
 	}
 
 	// If there is exactly one correct answer, it is a single-choice quiz
-	return correctCount === 1;
+	return true;
 }
 
-function getQuizOptionsFromMarkdown(markdownContent, splitLines) {
+/**
+ * Extracts quiz options from the provided Markdown content and returns them as a formatted JSON string.
+ *
+ * @param {string[]} splitLines - The Markdown content split into lines by '\n'.
+ * @returns {string} A JSON string representing an array of quiz option objects, each with "optionText" and "correct" properties.
+ */
+function getQuizOptionsFromMarkdown(splitLines /* Lines split after \n */) {
 
 	// Return the options as a JSON string like:
 	/*
@@ -163,7 +242,7 @@ function getQuizOptionsFromMarkdown(markdownContent, splitLines) {
 	*/
 	return JSON.stringify
 	(
-		getArrayOfQuizOptionsFromMarkdown(markdownContent, splitLines), 
+		getArrayOfQuizOptionsFromMarkdown(splitLines), // The array of quiz option objects in JSON
 		null, 
 		2
 	); 
@@ -176,11 +255,10 @@ function getQuizOptionsFromMarkdown(markdownContent, splitLines) {
  * 
  * Each matching line is processed by the handleMarkdownQuizOptions function.
  *
- * @param {string} markdownContent - The full markdown content containing quiz options.
  * @param {string[]} splitLines - An array of strings, each representing a line from the markdown content.
  * @returns {Array} An array of parsed quiz options as returned by handleMarkdownQuizOptions.
  */
-function getArrayOfQuizOptionsFromMarkdown(markdownContent, splitLines) {
+function getArrayOfQuizOptionsFromMarkdown(splitLines) {
 	// Initialize an array to hold the parsed quiz options
 	let options = [];
 
@@ -218,13 +296,16 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	const lines = markdownContent.split('\n');
 
 	// Initialize an array to hold the parsed expressions
-	const result = [];
+	const result = {};
 
 	// Checks if there are options in the markdown content (indicated by '###').
 	let hasOptions = false;
 
 	// Flag to track if we are currently processing a question when parsing the line with '# '
-	let isQuestion = true; 
+	let isQuestion = true;
+
+	// Get the quiz options from the markdown content and store them in a JSON object
+	const quizOptionsJSON_obj = getQuizOptionsFromMarkdown(lines);
 
 	// Iterate through each line to parse the markdown content
 	for(let ln of lines) {
@@ -233,21 +314,20 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 		// In the second parsing, it is interpreted as the question type.
 		if( ln.startsWith('# ') ) {
 
-			if(isQuestion) {
+			// extracts the question text by removing the '# ' prefix, trailing and leading whitespaces
+			const parsedContent = ln.slice(2).trim()
 
-				// extracts the question text by removing the '# ' prefix, trailing and leading whitespaces
-				const questionText = ln.slice(2).trim()
+			if(isQuestion) {
 
 				// Reset the flag for the next question
 				isQuestion = false; 
 
-				result.push( { question: questionText } );
+				// adds the question text to the result object
+				result[`question`] = "<div>\n      " /* 6 spaces */ + parsedContent + "\n    </div>" /* 4 spaces */; 
 
 			} else {
-				
-				const questionText = ln.slice(2).trim()
 
-				result.push( { comment: questionText } );
+				result[`type`] = getQuizTypeFromMnemonic(parsedContent)
 
 			} // end of if-else
 
@@ -255,24 +335,17 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	
 		// '##' is interpreted as the quiz comment (optional).
 		else if( ln.startsWith('## ') ) {
-			 const comment = ln.slice(3).trim()
-			 result.push( { comment } );
+			 const commentText = ln.slice(3).trim() // gets the comment text by removing the '## ' prefix
+			 result[`comment`] = commentText
 		}
-
-		// '###' is interpreted as the quiz option.
-		else if ( ln.startsWith('### ') ) {
-			
-			// If there is no question yet, we need to create one. The 'options' attribute starts with a '['
-			if( !hasOptions ) {
-				
-			}
-
-			result.push( handleMarkdownQuizOptions(ln) );
-		} // end of if-else
 
 	} // end of for
 
-	return {content: result};
+	result[`options`] = quizOptionsJSON_obj // get the quiz options from the markdown content
+	result[`quizSet`] = 'GENERIC'
+	result[`inputFilter`] = { }
+	
+	return [result]; // Return the result as an array containing a single object
 } // end of function `markdown_to_JSON_translator`
 
 
