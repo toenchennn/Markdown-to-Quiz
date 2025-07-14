@@ -77,73 +77,10 @@ function markdown_to_JSON_translator(markdownContent) {
 }
 
 
-function markdown_to_JSON_translatorV2(markdownContent) {
-
-	// Split the markdown content into lines for processing
-	const result = [];
-
-	// Split the markdown content into lines for processing
-	const splitLines = markdownContent.split('\n');
-
-	markdownTokenProcessor(splitLines);
-
-}
-
-
-function markdownTokenProcessor(splitLines) {
-
-	// Initialize an array to hold the parsed expressions
-	const result = [];
-
-	// Flag to track if we are currently processing a question when parsing the line with '# '
-	// Otherwise, it is interpreted as the question type.
-	let isQuestion = true; 
-
-	// Iterate through each line to parse the markdown content
-	for(let ln of lines) {
-
-		// '#' is interpreted as the question text in the first parsing.
-		// In the second parsing, it is interpreted as the question type.
-		if( ln.startsWith('# ') ) {
-
-				const getLineContent = ln.slice(2).trim();
-
-			if(isQuestion) {
-
-				// Reset the flag for the next question
-				isQuestion = false; 
-				result.push( { question: getLineContent } );
-
-			} else {
-				
-				
-
-			} // end of if-else
-
-		}
-	
-		// '##' is interpreted as the quiz comment (optional).
-		else if( ln.startsWith('## ') ) {
-			 const comment = ln.slice(3).trim()
-			 result.push( { comment } );
-		}
-
-		// '###' is interpreted as the quiz option.
-		else if ( ln.startsWith('### ') ) {
-			
-			result.push( handleMarkdownQuizOptions(ln) );
-		} // end of if-else
-
-	} // end of for
-
-}
-
-
 function handleInconsistentQuizType(quizType, arrayOfQuizOptions) {
 
-	if( isSingleChoiceQuiz(arrayOfQuizOptions) ) {
+	if( isSingleChoiceQuiz(arrayOfQuizOptions) )
 		return quizType === 'SINGLE' ? true : false;
-	}
 
 	// Since the quiz type is not SINGLE, we can assume it is MULTIPLE
 	return true;
@@ -204,16 +141,14 @@ function isSingleChoiceQuiz(listOfOptions/* List of JSON Objects */) {
 
 	for(let option of listOfOptions) {
 		if(option.correct) {
-			correctCount = true;
+			correctCount = true
 			break; // prevents iterating 
 		}
 	}
 
-	if(!correctCount) {
-		// If there are no correct answers, it is not a single-choice quiz
-		
+	if(!correctCount) // If there are no correct answers, it is not a single-choice quiz
 		return false;
-	}
+	
 
 	// If there is exactly one correct answer, it is a single-choice quiz
 	return true;
@@ -262,13 +197,15 @@ function getArrayOfQuizOptionsFromMarkdown(splitLines) {
 	// Initialize an array to hold the parsed quiz options
 	let options = [];
 
-	for(let ln of splitLines) {
-		// '###' is interpreted as the quiz option.
-		if ( ln.startsWith('### ') ) {
-			options.push( handleMarkdownQuizOptions(ln) );
-		} // end of if-else
-	}
+	// Searches for each line representing a quiz option in the markdown content.
+	for(let ln of splitLines)
 
+		// '- [ ]' and '- [x]' are interpreted as the quiz option.
+		if ( ln.startsWith('- [x]') || ln.startsWith('- [ ]') ) 
+			options.push( handleMarkdownQuizOptions(ln) )
+		
+
+	// Return the array of quiz options, not processed as JSON yet.
 	return options;
 }
 
@@ -339,7 +276,7 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	} // end of for
 
 	// Get the quiz options from the markdown content and store them in a JSON object.
-	result[`options`] = getQuizOptionsFromMarkdown(lines);
+	result[`options`] = getArrayOfQuizOptionsFromMarkdown(lines);
 
 	result[`quizSet`] = 'GENERIC'
 	result[`inputFilter`] = { }
@@ -362,7 +299,8 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_JSON_translator` to handle quiz options
 
 	// Gets the option text by removing the '### ' prefix
-	let optionTxt = ln.slice(4).trim();
+	//let optionTxt = ln.slice(4).trim()
+	let optionTxt = ln.trim()
 
 	// Array of substring tokens, split at whitespaces, e.g. '[x] Option   1' -> ['[x]', 'Option', '1']
 	// This variable is relevant for checking if the option is correct ('[x]') or not.
@@ -371,13 +309,13 @@ function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_
 	// Assume that the option is incorrect by default until proven otherwise (i.e., if it starts with '[x]')
 	let isCorrect = false;
 
-	// Checks if the first token is '[x]'.
-	// Assume there are no other patterns like '[x]' in the option text.
-	if (tokenize[0] === '[x]') {
+	// Checks if the first token is '- [x]'.
+	// Assume there are no other patterns like '- [x]' in the option text.
+	if (tokenize[0] === '- [x]') {
 
-		// If the first token is '[x]', it indicates a correct answer
+		// If the first token is '- [x]', it indicates a correct answer
 		isCorrect = true;
-		optionTxt = optionTxt.split('[x]')[1]; // Remove '[x] ' prefix
+		optionTxt = optionTxt.split('- [x]')[1]; // Remove '[x] ' prefix
 		optionTxt = optionTxt.trim(); // Trim any leading/trailing whitespace
 
 	} 
@@ -385,12 +323,12 @@ function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_
 	// Assume there are no other patterns like '[ ]' in the option text.
 	else {
 
-		const splitOption = optionTxt.split('[ ]');
+		const splitOption = optionTxt.split('- [ ]');
 		
 		// Ensure that the option starts with '[ ]' if it is not correct
 		// Otherwise, it is a regular option, so calling at index 1 leads to an out-of-bounds error
 		if( splitOption.length > 1 ) {
-			optionTxt = optionTxt.split('[ ]')[1]; // Remove '[ ] ' prefix
+			optionTxt = optionTxt.split('- [ ]')[1]; // Remove '[ ] ' prefix
 		}
 
 	}
