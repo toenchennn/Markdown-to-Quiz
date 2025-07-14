@@ -1,10 +1,20 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-const vscode = require('vscode');
+const vscode = require('vscode')
+
+// =======================================================================================
+// 										ATTRIBUTES 
+// =======================================================================================
+
+const CORRECT_QUIZ_OPTION_PREFIX = '- [x] '
+
+
+// =======================================================================================
+// 										FUNCTIONS 
+// =======================================================================================
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-
 /**
  * @param {vscode.ExtensionContext} context
  */
@@ -22,13 +32,13 @@ function activate(context) {
 		'markdown-quiz-editor.helloWorld', 
 
 		function () {
-			vscode.window.showInformationMessage('Hello World from Markdown Quiz Editor!');
-			testFunction();
+			vscode.window.showInformationMessage('Hello World from Markdown Quiz Editor!')
+			testFunction()
 
 			const editor = vscode.window.activeTextEditor;
 
 			if(!editor) {
-				vscode.window.showErrorMessage('No active text editor found.');
+				vscode.window.showErrorMessage('No active text editor found.')
 				return;
 			}
 
@@ -73,17 +83,17 @@ function activate(context) {
  * // ]
  */
 function markdown_to_JSON_translator(markdownContent) {
-	return markdown_to_JSON_translatorV1(markdownContent);
+	return markdown_to_JSON_translatorV1(markdownContent)
 }
 
 
 function handleInconsistentQuizType(quizType, arrayOfQuizOptions) {
 
 	if( isSingleChoiceQuiz(arrayOfQuizOptions) )
-		return quizType === 'SINGLE' ? true : false;
+		return quizType === 'SINGLE' ? true : false
 
 	// Since the quiz type is not SINGLE, we can assume it is MULTIPLE
-	return true;
+	return true
 
 }
 
@@ -102,23 +112,23 @@ function handleInconsistentQuizType(quizType, arrayOfQuizOptions) {
 function getQuizTypeFromMnemonic(mnemonic) {
 
 	// Convert the mnemonic to uppercase for case-insensitive comparison
-	const mnemonicUpper = mnemonic.toUpperCase();
+	const mnemonicUpper = mnemonic.toUpperCase()
 
 	if( 'MULTIPLE'.startsWith(mnemonicUpper) || mnemonicUpper === 'MC' ) {
 
-		return 'MULTIPLE';
+		return 'MULTIPLE'
 
 	} else if( 'SINGLE'.startsWith(mnemonicUpper) || mnemonicUpper === 'SC' ) {
 
-		return 'SINGLE';
+		return 'SINGLE'
 
 	} else if( 'NUMERIC'.startsWith(mnemonicUpper) ) {
 
-		return 'NUMERIC';
+		return 'NUMERIC'
 
 	} else if( 'FREE_TEXT'.startsWith(mnemonicUpper) || 'FREETEXT'.startsWith(mnemonicUpper) ) {
 
-		return 'FREE_TEXT';
+		return 'FREE_TEXT'
 
 	} else 
 		return null
@@ -137,7 +147,7 @@ function getQuizTypeFromMnemonic(mnemonic) {
 function isSingleChoiceQuiz(listOfOptions/* List of JSON Objects */) {
 
 	// Check if the list of options contains only one correct answer
-	let correctCount = false;
+	let correctCount = false
 
 	for(let option of listOfOptions) {
 		if(option.correct) {
@@ -147,11 +157,11 @@ function isSingleChoiceQuiz(listOfOptions/* List of JSON Objects */) {
 	}
 
 	if(!correctCount) // If there are no correct answers, it is not a single-choice quiz
-		return false;
+		return false
 	
 
 	// If there is exactly one correct answer, it is a single-choice quiz
-	return true;
+	return true
 }
 
 /**
@@ -180,8 +190,8 @@ function getQuizOptionsFromMarkdown(splitLines /* Lines split after \n */) {
 		getArrayOfQuizOptionsFromMarkdown(splitLines), // The array of quiz option objects in JSON
 		null, 
 		2
-	); 
-}
+	)
+} // end of function
 
 
 /**
@@ -195,13 +205,15 @@ function getQuizOptionsFromMarkdown(splitLines /* Lines split after \n */) {
  */
 function getArrayOfQuizOptionsFromMarkdown(splitLines) {
 	// Initialize an array to hold the parsed quiz options
-	let options = [];
+	let options = []
 
 	// Searches for each line representing a quiz option in the markdown content.
 	for(let ln of splitLines)
 
 		// '- [ ]' and '- [x]' are interpreted as the quiz option.
-		if ( ln.startsWith('- [x]') || ln.startsWith('- [ ]') ) 
+		// /^\s*-\s\[\s?[xX]?\s?\]\s*/ 
+		// /^\s*-\s\[\s\]\s+(.*)/
+		if ( ln.match(/^\s*-\s*\[\s*(x|X)?\s*\]/) )
 			options.push( handleMarkdownQuizOptions(ln) )
 		
 
@@ -230,10 +242,10 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	
 	// Split the markdown content into lines for processing
 	// Returns each line as an element in an array
-	const lines = markdownContent.split('\n');
+	const lines = markdownContent.split('\n')
 
 	// Initialize an array to hold the parsed expressions
-	const result = {};
+	const result = {}
 
 	// Checks if there are options in the markdown content (indicated by '###').
 	let hasOptions = false
@@ -251,6 +263,7 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 			// extracts the question text by removing the '# ' prefix, trailing and leading whitespaces
 			const parsedContent = ln.slice(2).trim()
 
+			// This case distinction is important since '# ' is used for both the question text and the question type.
 			if(isQuestion) {
 
 				// Reset the flag for the next question
@@ -276,7 +289,7 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	} // end of for
 
 	// Get the quiz options from the markdown content and store them in a JSON object.
-	result[`options`] = getArrayOfQuizOptionsFromMarkdown(lines);
+	result[`options`] = getArrayOfQuizOptionsFromMarkdown(lines)
 
 	result[`quizSet`] = 'GENERIC'
 	result[`inputFilter`] = { }
@@ -297,26 +310,53 @@ function markdown_to_JSON_translatorV1(markdownContent) {
  * @returns {{ optionText: string, correct: boolean }} An object with the extracted option text and a flag indicating if it is the correct answer.
  */
 function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_JSON_translator` to handle quiz options
+	return handleMarkdownQuizOptionsV2(ln)
 
+} // end of function `handleMarkdownQuizOptions`
+
+
+function isCheckedTask(ln) {
+	return /^\s*-\s*\[\s*[xX]\s*\]/.test(ln)
+}
+
+function removeCheckbox(ln) {
+	
+	// const result = ln.replace(/^\s*-\s\[\s?[xX]?\s?\]\s*/, '')
+	const result = ln.replace(/^\s*-\s*\[\s*(x|X)?\s*\]/, '')
+	return result
+}
+
+
+function handleMarkdownQuizOptionsV2(ln) {
+
+	return {
+		optionText: removeCheckbox(ln).trim(),
+		correct: isCheckedTask(ln)
+	}	
+
+}
+
+
+function handleMarkdownQuizOptionsV1(ln) {
 	// Gets the option text by removing the '### ' prefix
 	//let optionTxt = ln.slice(4).trim()
 	let optionTxt = ln.trim()
 
 	// Array of substring tokens, split at whitespaces, e.g. '[x] Option   1' -> ['[x]', 'Option', '1']
 	// This variable is relevant for checking if the option is correct ('[x]') or not.
-	const tokenize = optionTxt.split(/\s+/);
+	const tokenize = optionTxt.split(/\s+/)
 
 	// Assume that the option is incorrect by default until proven otherwise (i.e., if it starts with '[x]')
-	let isCorrect = false;
+	let isCorrect = false
 
 	// Checks if the first token is '- [x]'.
 	// Assume there are no other patterns like '- [x]' in the option text.
 	if (tokenize[0] === '- [x]') {
 
 		// If the first token is '- [x]', it indicates a correct answer
-		isCorrect = true;
-		optionTxt = optionTxt.split('- [x]')[1]; // Remove '[x] ' prefix
-		optionTxt = optionTxt.trim(); // Trim any leading/trailing whitespace
+		isCorrect = true
+		optionTxt = optionTxt.split('- [x]')[1] // Remove '[x] ' prefix
+		optionTxt = optionTxt.trim() // Trim any leading/trailing whitespace
 
 	} 
 	
@@ -328,7 +368,7 @@ function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_
 		// Ensure that the option starts with '[ ]' if it is not correct
 		// Otherwise, it is a regular option, so calling at index 1 leads to an out-of-bounds error
 		if( splitOption.length > 1 ) {
-			optionTxt = optionTxt.split('- [ ]')[1]; // Remove '[ ] ' prefix
+			optionTxt = splitOption[1] // Remove '[ ] ' prefix
 		}
 
 	}
@@ -337,13 +377,12 @@ function handleMarkdownQuizOptions(ln) { // Auxiliary function for `markdown_to_
 		optionText: optionTxt, // get option text
 		correct: isCorrect // default to false
 	}	
-
-} // end of function `handleMarkdownQuizOptions`
+}
 
 
 
 function testFunction() {
-	vscode.window.showInformationMessage('This is a test function!');
+	vscode.window.showInformationMessage('This is a test function!')
 }
 
 // This method is called when your extension is deactivated
