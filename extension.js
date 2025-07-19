@@ -247,14 +247,14 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	// Initialize an array to hold the parsed expressions
 	const result = {}
 
-	// Checks if there are options in the markdown content (indicated by '###').
-	let hasOptions = false
-
 	// Flag to track if we are currently processing a question when parsing the line with '# '
 	let isQuestion = true
 
 	// Iterate through each line to parse the markdown content
 	for(let ln of lines) {
+
+		// Removes leading and trailing whitespaces for better handling
+		ln = ln.trim()
 
 		// '#' is interpreted as the question text in the first parsing.
 		// In the second parsing, it is interpreted as the question type.
@@ -282,9 +282,11 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 	
 		// '##' is interpreted as the quiz comment (optional).
 		else if( ln.startsWith('## ') ) {
+			
 			 const commentText = ln.slice(3).trim() // gets the comment text by removing the '## ' prefix
 			 result[`comment`] = commentText
-		}
+
+		} // end of if-else
 
 	} // end of for
 
