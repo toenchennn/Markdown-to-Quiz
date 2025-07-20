@@ -1,6 +1,40 @@
+
+
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode')
+
+// =======================================================================================
+// 									  CUSTOM IMPORTS 
+// =======================================================================================
+
+/**
+ * Imports the 'marked' library, a markdown parser and compiler.
+ * @module marked
+ */
+const { marked } = require('marked');
+
+/**
+ * Custom renderer object for formatting Markdown elements into HTML.
+ * @property {function(string): string} strong - Renders strong (bold) text. Wraps the input string in <b> tags.
+ * @property {function(string): string} em - Renders emphasized (italic) text. Wraps the input string in <i> tags.
+ * @property {function(string): string} del - Renders deleted (strikethrough) text. Wraps the input string in <s> tags.
+ */
+const renderer = {
+	strong(ln) {
+		return `<b>${ln}</b>`
+	},
+	em(ln) {
+		return `<i>${ln}</i>`
+	},
+	del(ln) {
+		return `<s>${text}</s>`
+	}
+
+};
+
+// Overriding marked to use classic HTML formatting wraps.
+// marked.use({ renderer });
 
 // =======================================================================================
 // 										ATTRIBUTES 
@@ -95,6 +129,17 @@ function handleInconsistentQuizType(quizType, arrayOfQuizOptions) {
 	// Since the quiz type is not SINGLE, we can assume it is MULTIPLE
 	return true
 
+}
+
+/**
+ * Translates Markdown formatting in a given line to corresponding HTML tags.
+ * Applies strikethrough, underline, italic, and bold conversions in order.
+ *
+ * @param {string} ln - The input string containing Markdown formatting.
+ * @returns {string} The string with Markdown formatting converted to HTML.
+ */
+function translateFormatting(ln) {
+	return marked.parseInline(ln)
 }
 
 /**
@@ -255,6 +300,9 @@ function markdown_to_JSON_translatorV1(markdownContent) {
 
 		// Removes leading and trailing whitespaces for better handling
 		ln = ln.trim()
+
+		// Converts formatting from Markdown to HTML format
+		ln = translateFormatting(ln)
 
 		// '#' is interpreted as the question text in the first parsing.
 		// In the second parsing, it is interpreted as the question type.
